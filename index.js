@@ -8,7 +8,7 @@ const weatherData = require('./data/weather.js');
 app.use(cors());
 
 function getLatLong(cityName) {
-    //change to api call
+    //change to api call here
     const city = geoData[0];
 
     return {
@@ -19,7 +19,7 @@ function getLatLong(cityName) {
 }
 
 function getWeather(lat, long) {
-    //change to api call
+    //change to api call here
     const data = weatherData.data;
     const forecastArray = data.map((weatherItem) => {
         return {
