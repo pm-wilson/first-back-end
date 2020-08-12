@@ -2,15 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const geoData = require('./data/geo.js');
-const weatherData = require('./data/weather.js');
 const port = process.env.PORT || 3000;
+const request = require('superagent');
 
 app.use(cors());
 
-function getLatLong(cityName) {
-    //change to api call here
-    const city = geoData[0];
+//imports protected info from env file
+const {
+    LOCATION_KEY,
+    WEATHER_KEY,
+    HIKING_KEY,
+    YELP_KEY,
+} = process.env;
+
+async function getLatLong(cityName) {
+    //calls to the api adding the information needed from the api's web site
+    const response = await request.get(`https://us1.locationiq.com/v1/search.php?key=${LOCATION_KEY}&q=${cityName}&format=json`);
+
+    //decides which city out of list to list info for/munges data
+    const city = response.body[0];
 
     return {
         formatted_query: city.display_name,
@@ -19,23 +29,48 @@ function getLatLong(cityName) {
     }
 }
 
-function getWeather(lat, long) {
+async function getWeather(lat, long) {
     //change to api call here
-    const data = weatherData.data;
-    const forecastArray = data.map((weatherItem) => {
+    const data = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?&lat=${lat}&lon=${long}&key=${WEATHER_KEY}`);
+
+    const forecastData = data.body.data.slice(0, 8)
+    const forecastArray = forecastData.map((weatherItem) => {
         return {
             forecast: weatherItem.weather.description,
             time: new Date(weatherItem.ts * 1000),
-        }
+        };
     });
 
     return forecastArray;
 }
 
-app.get('/location', (req, res) => {
+async function getTrails(lat, long) {
+    const trailData = await request.get(`https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${long}&key=${HIKING_KEY}`)
+
+    const mungedTrailData = trailData.body.trails;
+    return mungedTrailData;
+}
+
+async function getReviews(lat, long) {
+    const reviewData = await request.get(`https://api.yelp.com/v3/businesses/search?latitude=${lat}&longitude=${long}`).set('Authorization', `Bearer ${YELP_KEY}`);
+
+    const mungedReviewlData = reviewData.body.businesses.map((review) => {
+        return {
+            "name": review.name,
+            "image_url": review.image_url,
+            "price": review.price,
+            "rating": review.rating,
+            "url": review.url,
+        }
+    });
+console.log(mungedReviewlData)
+    return mungedReviewlData;
+}
+
+app.get('/location', async(req, res) => {
     try {
         const userInput = req.query.search;
-        const response = getLatLong(userInput)
+        const response = await getLatLong(userInput)
 
         res.json(response)
     } catch (e) {
@@ -43,12 +78,42 @@ app.get('/location', (req, res) => {
     }
 })
 
-app.get('/weather', (req, res) => {
+app.get('/weather', async(req, res) => {
     try {
         const userLat = req.query.latitude;
-        const userLong = req.query.longitude
-        const response = getWeather(userLat, userLong)
+        const userLong = req.query.longitude;
+        const response = await getWeather(userLat, userLong)
         res.json(response)
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+})
+
+app.get('/trails', async(req, res) => {
+    try {
+        const userLat = req.query.latitude;
+        const userLong = req.query.longitude;
+        const response = await getTrails(userLat, userLong)
+        res.json(response)
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+})
+
+app.get('/reviews', async(req, res) => {
+    try {
+        const userLat = req.query.latitude;
+        const userLong = req.query.longitude;
+        const response = await getReviews(userLat, userLong)
+        res.json(response)
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+})
+
+app.get('/events', async(req, res) => {
+    try {
+        res.json('');
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
