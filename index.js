@@ -31,9 +31,9 @@ async function getLatLong(cityName) {
 
 async function getWeather(lat, long) {
     //change to api call here
-    const data = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?&lat=${lat}&lon=${long}&key=${WEATHER_KEY}`);
+    const response = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?&lat=${lat}&lon=${long}&key=${WEATHER_KEY}`);
 
-    const forecastData = data.body.data.slice(0, 8)
+    const forecastData = response.body.data.slice(0, 8);
     const forecastArray = forecastData.map((weatherItem) => {
         return {
             forecast: weatherItem.weather.description,
@@ -63,7 +63,7 @@ async function getReviews(lat, long) {
             "url": review.url,
         }
     });
-console.log(mungedReviewlData)
+
     return mungedReviewlData;
 }
 
@@ -113,7 +113,12 @@ app.get('/reviews', async(req, res) => {
 
 app.get('/events', async(req, res) => {
     try {
-        res.json('');
+        res.json([{
+            link: 'www.gohere.com',
+            name: 'Patricks Cool Event',
+            event_date: '8/31/2020',
+            summary: 'Cool Virtural Event!',
+        }]);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
